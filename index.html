@@ -1,0 +1,229 @@
+<!doctype html>
+<html>
+<head>
+    <script src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style type="text/css">
+        @import url('https://fonts.googleapis.com/css?family=IBM+Plex+Mono:200');
+        html, body {
+        background: #262626;
+        width: 100%;
+        height: 100%;
+        font-family: 'IBM Plex Mono', monospace;
+        padding: 0;
+        margin: 0;
+        overflow: hidden;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        }
+
+        .hidden {
+        display: none !important;
+        }
+
+        .visible {
+        display: inherit !important;
+        }
+        form {
+            display: inline;
+        }
+        .cli-input,
+        .cli-input:focus {
+        width: 94.9%;
+        background: none;
+        border: none;
+        outline: none;
+        color: #DADFE5;
+        }
+
+        .dollar {
+        margin-right: 1%;
+        }
+
+        .cli {
+            width: 95%;
+            width: 95vw;
+        }
+
+        .cli .cli-header {
+        background: #EEF1F5;
+        height: 25px;
+        border-top-left-radius: 4px;
+        border-top-right-radius: 4px;
+        padding: 6px 15px 0 15px;
+        font-size: .75em;
+        color: #9b9fa5;
+        }
+
+        .cli .cli-header span {
+        display: inline-block;
+        text-align: center;
+        position: relative;
+        top: -1px;
+        margin-left: 15px;
+        }
+
+        .cli .cli-header span:hover {
+        cursor: default;
+        }
+
+        .cli .cli-header .dot {
+        background: #D8DCE2;
+        height: 15px;
+        width: 15px;
+        border-radius: 50%;
+        display: inline-block;
+        position: relative;
+        top: 2px;
+        transition: all .25s ease-in-out;
+        }
+
+        .cli .cli-header .dot:not(:nth-child(1)) {
+        margin-left: 4px;
+        }
+        /* Colors for dots */
+
+        .cli .cli-header .dot:nth-child(1) {
+        background: #DD333F;
+        }
+
+        .cli .cli-header .dot:nth-child(2) {
+        background: #F5D76E;
+        }
+
+        .cli .cli-header .dot:nth-child(3) {
+        background: #5FDD68;
+        }
+
+        .cli .cli-body {
+        background: #353B46;
+        padding: 30px;
+        min-height: 80%;
+        min-height: 80vh;
+        max-height: 80%;
+        max-height: 80vh;
+        color: #DADFE5;
+        font-size: .75em;
+        font-weight: 500;
+        border-bottom-left-radius: 4px;
+        border-bottom-right-radius: 4px;
+        overflow: auto;
+        overflow-y: scroll;
+        }
+
+        .cli .cli-body:hover {
+        cursor: text;
+        }
+
+        .cli .cli-body p {
+        margin-top: 0;
+        margin-bottom: 5px;
+        }
+
+        .cli .cli-body p.success {
+        color: #5FDD68;
+        }
+
+        .cli .cli-body p.error {
+        color: #DD333F;
+        }
+
+        .cli .cli-body p.small {
+        font-size: .7em;
+        }
+
+        .cli .cli-body p a,
+        .cli .cli-body p a:visited {
+        color: #dadfe5;
+        }
+
+        ::-webkit-scrollbar {
+        width: 8px;
+        }
+
+        ::-webkit-scrollbar-button {
+        width: 8px;
+        height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+        background: transparent;
+        border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+        background: #D8DCE2;
+        border: thin solid #D8DCE2;
+        border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+        background: #7d7d7d;
+        }
+    </style>
+</head>
+<body>
+    <div class="cli">
+        <div class="cli-header">
+            <a class="dot" href="#"></a>
+            <a class="dot" href="#"></a>
+            <a class="dot" href="#"></a>
+        </div>
+
+        <div class="cli-body" ng-click="focusTextarea()">
+            <div class="cli-control">
+                <span class="dollar left">$</span>
+                <form>
+                    <input type="text" class="cli-input right" name="cli-input" autocomplete="off" autofocus>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" charset="utf-8">
+        function parseHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/\n$/g, '')
+                .replace(/\n/g, '<br /><span class="dollar"></span> ');
+        }
+        function add_content(str, status){
+            $('.cli-control').before('<p class="'+status+'"><span class="dollar">'+(status == "cmd" ? "$": " ")+'</span> ' + parseHtml(str) + '</p>');
+            $('.cli-body').scrollTop($('.cli-body').height());
+        }
+
+        var socket = io('http://localhost:8080');
+
+        socket.on('err', function (data) {
+            add_content(data, 'error');
+        });
+
+        socket.on('out', function (data) {
+            add_content(data, 'success');
+        });
+
+        socket.on('cmd', function (data) {
+            add_content(data, 'cmd');
+        });
+
+        $(function(){
+            $(document).keypress(function(e){
+                $('input').focus();
+            });
+            $('form').submit(function(e){
+                e.preventDefault();
+                var input = $('input');
+                socket.emit('input', input.val());
+                input.val('');
+                return false;
+            });
+            $('input').focus();
+        });
+    </script>
+</body>
+</html>
